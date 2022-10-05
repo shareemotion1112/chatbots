@@ -2,7 +2,7 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
-
+import os
 import torch
 from torch.jit import script, trace
 import torch.nn as nn
@@ -10,13 +10,15 @@ from torch import optim
 import torch.nn.functional as F
 from Voc import Voc
 from Prepare import batch2TrainData, trimRareWords
-from Model import EncoderRNN, LuongAttnDecoderRNN, trainIters, GreedySearchDecoder
+from Model import EncoderRNN, LuongAttnDecoderRNN, trainIters, GreedySearchDecoder, evaluateInput
 from Const import PAD_token, EOS_token, SOS_token, device
 from convokit import Corpus, download
 
 # when reload
 # import importlib
 # importlib.reload()
+
+os.environ['KMP_DUPLICATE_LIB_OK']='True'
 
 corpus_name = "movie-corpus"
 corpus = None
@@ -38,16 +40,17 @@ voc = Voc('movie-corpus')
 for i, element in enumerate(conversation_list):
     ut_ids = conversation_list[i].get_utterance_ids()
     rows = []
-    for id in ut_ids:
-        utt = conversation_list[0].get_utterance(id)
-        rows.append(utt.text)
-        voc.addSentence(utt.text)
-        # print(f"utt : {utt.text}" )
-        # conv = conversation_list[0].get_utterance(id).get_conversation()
-        # print( f"conversation : {conv}" )
-    conversation_pairs.append(rows)
+    if i < 1000: # 갯수를 제한 -------------------------------------------  !!!
+        for id in ut_ids:
+            utt = conversation_list[0].get_utterance(id)
+            rows.append(utt.text)
+            voc.addSentence(utt.text)
+            # print(f"utt : {utt.text}" )
+            # conv = conversation_list[0].get_utterance(id).get_conversation()
+            # print( f"conversation : {conv}" )
+        conversation_pairs.append(rows)
 
-print(conversation_pairs[:10])
+print(f"conversation_pairs : {len(conversation_pairs)}")
 
 
 """ 빈도수가 적은 단어를 제거 """
@@ -164,4 +167,4 @@ decoder.eval()
 searcher = GreedySearchDecoder(encoder, decoder)
 
 # 채팅을 시작합니다 (다음 줄의 주석을 제거하면 시작해볼 수 있습니다)
-# evaluateInput(encoder, decoder, searcher, voc)
+evaluateInput(encoder, decoder, searcher, voc)
